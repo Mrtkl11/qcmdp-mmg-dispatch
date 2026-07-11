@@ -1,0 +1,41 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Build and test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local experiment data
+Environment_data_2018.csv
+*.local.json
+
+# Training outputs
+global_ring_qcmdp_weights/
+global_evaluation_results/
+q_cmdp_single_mg*_outputs/
+
+# Model checkpoints and logs
+*.pt
+*.pth
+*.log
+
+# Generated figures and tables
+*.png
+*.pdf
+
