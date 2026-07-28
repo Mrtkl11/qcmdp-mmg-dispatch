@@ -1,259 +1,165 @@
-﻿# Decentralized Safety-Aware Quantum Federated Multi-Agent Reinforcement Learning for Multi-Microgrid Dispatch
+# Decentralized Quantum Federated Reinforcement Learning for Safe Multi-Microgrid System Dispatch
 
-This repository contains the public research code for the paper:
+This repository contains the public implementation associated with the paper *Decentralized Quantum Federated Reinforcement Learning for Safe Multi-Microgrid System Dispatch*.
 
-**Decentralized Safety-Aware Quantum Federated Multi-Agent Reinforcement Learning for Multi-Microgrid Dispatch**
+It provides the proposed Q-CMDP method, the IEEE 33-bus multi-microgrid environment, fault-tolerant ring federation, QPPO, A2C, PPO, SAC, and constrained PPO.
 
-The release is organized to make the method design, algorithmic structure, and implementation logic clear and reusable, while keeping the full reproduction workflow outside the public repository.
+## Method
 
-## Overview
+Q-CMDP combines a classical Gaussian actor, separate variational quantum reward and safety critics, a primal-dual CMDP update, and decentralized ring federation. Each VQC applies one RX/RY/RZ state-encoding stage, repeated RY/RZ variational layers with nearest-neighbor CZ entanglement, Pauli-Z measurements, and a single linear value readout. The environment applies equipment, SOC, fuel, PCC, and network limits, but it does not use posterior QP action projection, CVXPY, OSQP, or another optimization safety layer.
 
-The code follows the paper formulation:
+The reward channel contains economic dispatch cost, recourse cost, network loss, and training regularizers. The CMDP cost channel contains voltage excess, dispatch-channel capacity excess, and branch-flow capacity excess.
 
-- **Q-CMDP** for safety-aware reinforcement learning
-- **Classical Gaussian actor**
-- **Dual VQC critics**
-- **Adaptive Lagrange multiplier**
-- **Ring-based decentralized federated aggregation**
-- **Offline-node bypass during aggregation**
+Each active client trains from the same incoming global model. Local parameters are combined with an equal-weight arithmetic mean, VQC angles with an equal-weight circular mean, and the result with the previous global state using the configured inter-round momentum. Unavailable clients are bypassed when topology reconfiguration is enabled.
 
-## Repository Structure
+## State and action spaces
+
+The normalized state follows the paper ordering:
 
 ```text
-project/
+[PV, wind, load, SOC, diesel output, remaining fuel, PCC exchange,
+ 33 bus voltages, 32 branch loading states, network loss, buy price, sell price]
+```
+
+The resulting observation dimension is 75. The continuous policy action is:
+
+```text
+[diesel request, battery request, PCC exchange request]
+```
+
+Each action component lies in `[-1, 1]`. The environment maps requests to physically bounded schedules and represents residual deficits or surpluses through load shedding or renewable curtailment. Network violations remain observable CMDP costs rather than post-processed action corrections.
+
+## Repository layout
+
+```text
+qcmdp-upload/
+|-- baselines/
+|-- configs/
+|-- data/
+|-- experiments/
+|-- hardware/
+|-- results/
+|-- scripts/
+|-- src/
+|-- CITATION.cff
+|-- CONTRIBUTING.md
+|-- LICENSE
 |-- README.md
 |-- environment.yml
-|-- requirements.txt
-|-- data/
-|   `-- Environment_data_2018.csv
-|-- configs/
-|   `-- experiment_config.template.json
-|-- src/
-|   |-- ieee33_mmg_env.py
-|   |-- qcmdp_model_pennylane.py
-|   |-- qcmdp_single_mg_training.py
-|   |-- release_config.py
-|   `-- ring_federated_qcmdp_training.py
-|-- baselines/
-|-- experiments/
-|-- scripts/
-|   |-- reproduce_main_results.sh
-|   |-- reproduce_ablation.sh
-|   `-- reproduce_sensitivity.sh
-|-- results/
-`-- LICENSE
+|-- pyproject.toml
+`-- requirements.txt
 ```
 
-## File Description
+The main implementation is located in:
 
-- `src/ieee33_mmg_env.py`
-  Public IEEE 33-bus multi-microgrid environment implementation with:
-  - distributed energy resource modeling,
-  - battery and diesel dynamics,
-  - grid interaction,
-  - simplified network power flow,
-  - economic reward,
-  - safety constraint cost.
+- `src/ieee33_mmg_env.py`: IEEE 33-bus multi-microgrid environment and DistFlow evaluation;
+- `src/qcmdp_model_pennylane.py`: classical actor and VQC critic;
+- `src/qcmdp_single_mg_training.py`: primal-dual Q-CMDP training and evaluation;
+- `src/ring_federated_qcmdp_training.py`: fault-tolerant equal-weight ring federation.
 
-- `src/qcmdp_model_pennylane.py`
-  Model definitions for:
-  - `GaussianActor`
-  - `VQCCritic`
-  - `QuantumCriticConfig`
+The comparison implementations are located in `baselines/`. All methods use the same environment, state/action definitions, cost interface, evaluation horizon, and federated aggregation rule.
 
-- `src/qcmdp_single_mg_training.py`
-  Single-microgrid Q-CMDP training and evaluation entrypoint.
+The `hardware/` utilities export the trained dual-VQC circuits without credentials and summarize repeated QPU Pauli-Z measurements after authorized cloud execution.
 
-- `src/ring_federated_qcmdp_training.py`
-  Ring-federated multi-microgrid Q-CMDP training entrypoint.
+## Configuration
 
-- `src/release_config.py`
-  Public-release utilities for:
-  - loading external dataset paths,
-  - loading optional JSON experiment overrides,
-  - merging configuration overrides.
+Optimizer settings, architecture choices, rollout lengths, batch sizes, update counts, CMDP settings, and federation settings are stored only in JSON files under `configs/`. Python source files do not contain experiment-level training defaults.
 
-- `configs/experiment_config.template.json`
-  Public configuration template for training. This is a template rather than a paper-final reproduction file.
+- `environment.paper.json`: physical system, reward, and safety-cost definition;
+- `experiment_config.template.json`: Q-CMDP and standard federation settings;
+- `baselines.template.json`: all comparison-method settings;
+- `fault_tolerance.paper.json`: MG3 outage during rounds 21-40 with bypass;
+- `fault_tolerance_ablation.paper.json`: the same outage without topology reconstruction.
+- `hardware_evaluation.template.json`: QPU payload and repeated-measurement paths.
 
-## Method Mapping
+The supplied JSON values follow the paper table where reported and preserve necessary implementation settings not listed in the table. A resolved configuration is saved with each run.
 
-The code is aligned with the paper in the following way:
+## Installation
 
-1. **Local safe reinforcement learning**
-   Each microgrid is modeled as a constrained Markov decision process. The actor maximizes the economic objective, while the safety critic estimates constraint cost. The Lagrange multiplier is updated online.
-
-2. **Hybrid quantum-classical design**
-   The actor is classical for continuous dispatch control. The reward critic and safety critic are implemented as variational quantum circuit critics.
-
-3. **Ring federated learning**
-   Federated training is implemented as sequential ring aggregation over active clients. If a node is inactive, it is bypassed during aggregation.
-
-## State, Action, Reward, and Constraint
-
-- Action definition:
-  `a_t = [P_t^{dg}, P_t^{bat}, P_t^{grid}]`
-
-- Environment outputs:
-  - `reward`: economic objective
-  - `constraint_cost`: safety-related violation cost
-
-- Observation includes information related to:
-  - renewable generation,
-  - load demand,
-  - battery SOC,
-  - diesel output,
-  - fuel level,
-  - grid exchange,
-  - voltage and line-related network features,
-  - electricity prices,
-  - short-horizon next-step signals,
-  - previous action.
-
-## Requirements
-
-Recommended Python version:
-
-- `Python 3.10+`
-
-Install dependencies:
+Python 3.10 or newer is recommended.
 
 ```bash
-pip install numpy pandas matplotlib torch pennylane gymnasium
+pip install -r requirements.txt
 ```
 
-Alternatively, create the reproducible Conda environment from `environment.yml`:
+Alternatively:
 
 ```bash
 conda env create -f environment.yml
 conda activate qcmdp-mmg
 ```
 
-If your environment already has `gym`, the code can also use it directly. Otherwise it falls back to `gymnasium`.
+## Dataset
 
-## Public Release Note
+The local experiment CSV uses the columns:
 
-This public repository is intended to expose the **algorithmic pipeline** and **implementation logic** of the framework.
-
-It does **not** include the full reproduction-grade dataset and exact final experiment setup used for paper-ready result generation.
-
-That means:
-
-- you must provide your own external dataset path,
-- you may need your own aligned preprocessing workflow,
-- the included JSON config is a public template rather than the exact final paper configuration.
-
-## Data Input
-
-Training requires an external CSV dataset.
-
-You must provide the dataset through one of the following:
-
-- command-line argument `--data-path`
-- environment variable `QCMDP_DATA_PATH`
-
-If neither is provided, training will stop with a clear error message.
-
-## Running the Code
-
-### 1. Single-Microgrid Training
-
-```bash
-python src/qcmdp_single_mg_training.py --data-path data/Environment_data_2018.csv
+```text
+time, household_power, solar_power, wind_power, EUR/kWh
 ```
 
-Optional configuration override:
+The merged third-party dataset is excluded from Git by default. Obtain the source series under their applicable terms, create the merged CSV, and pass it with `--data-path`. The repository includes only a small synthetic test fixture, which is not intended for paper-result reproduction.
+
+## Single-microgrid experiments
 
 ```bash
-python src/qcmdp_single_mg_training.py --data-path data/Environment_data_2018.csv --config-json configs/experiment_config.template.json
+python -m src.qcmdp_single_mg_training --data-path data/Environment_data_2018.csv --config-json configs/experiment_config.template.json --mg-id 1
+python -m baselines.a2c --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json --mg-id 1
+python -m baselines.ppo --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json --mg-id 1
+python -m baselines.qppo --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json --mg-id 1
+python -m baselines.sac --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json --mg-id 1
+python -m baselines.constrained_ppo --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json --mg-id 1
 ```
 
-This script will:
+QPPO uses the same classical actor and reward VQC architecture as Q-CMDP with PPO clipping, but it has no safety critic or Lagrange multiplier. C-PPO uses classical reward and safety critics with the same primal-dual constraint objective.
 
-- train a single-microgrid Q-CMDP agent,
-- save actor and critic weights,
-- export convergence data,
-- generate evaluation figures and CSV outputs.
-
-### 2. Ring-Federated Multi-Microgrid Training
+## Federated experiments
 
 ```bash
-python src/ring_federated_qcmdp_training.py --data-path data/Environment_data_2018.csv
+python -m src.ring_federated_qcmdp_training --data-path data/Environment_data_2018.csv --config-json configs/experiment_config.template.json
+python -m baselines.federated --algorithm qppo --data-path data/Environment_data_2018.csv --config-json configs/baselines.template.json
 ```
 
-This script will:
+Replace `qppo` with `a2c`, `ppo`, `sac`, or `constrained_ppo` for the other baselines.
 
-- train all microgrids in a federated manner,
-- perform ring aggregation across active clients,
-- save global checkpoints,
-- export reward and constraint-cost convergence curves,
-- generate final evaluation plots for each microgrid.
+## Reproduction scripts
 
-## Configurable Environment Variables
-
-For federated training, the following environment variables are supported:
-
-- `FL_ROUNDS`
-  Number of federated rounds.
-
-- `LOCAL_UPDATES`
-  Number of local updates per client in each federated round.
-
-- `ACTIVE_INDICATORS`
-  Active client mask, for example:
-  `1,1,0,1,1`
-
-- `RING_ALPHA`
-  Ring aggregation mixing coefficient.
-
-- `FED_SEED`
-  Random seed for federated training.
-
-Example on Windows CMD:
-
-```bash
-set FL_ROUNDS=50
-set LOCAL_UPDATES=5
-set ACTIVE_INDICATORS=1,1,1,1,1
-set RING_ALPHA=0.2
-python src/ring_federated_qcmdp_training.py --data-path C:\path\to\your\data.csv
-```
-
-Example on PowerShell:
+Windows PowerShell:
 
 ```powershell
-$env:FL_ROUNDS=50
-$env:LOCAL_UPDATES=5
-$env:ACTIVE_INDICATORS="1,1,1,1,1"
-$env:RING_ALPHA=0.2
-python .\src\ring_federated_qcmdp_training.py --data-path C:\path\to\your\data.csv
+.\scripts\reproduce_main_results.ps1
+.\scripts\reproduce_ablation.ps1
 ```
 
-## Output
+Bash:
 
-Typical outputs include:
+```bash
+bash scripts/reproduce_main_results.sh
+bash scripts/reproduce_ablation.sh
+```
 
-- model checkpoints,
-- training convergence CSV files,
-- reward convergence plots,
-- constraint-cost convergence plots,
-- operation history CSV files,
-- voltage heatmaps,
-- line loading plots,
-- network metric CSV files.
+The sensitivity runner accepts the dataset followed by one or more complete Q-CMDP JSON configurations:
 
-## Notes
+```bash
+bash scripts/reproduce_sensitivity.sh data/Environment_data_2018.csv configs/run_a.json configs/run_b.json
+```
 
-- This repository is organized to match the paper formulation instead of preserving older experimental naming.
-- The public environment implementation is simplified for research transparency and algorithm inspection.
-- Exact figure-level reproduction may still require aligned data, configuration, random seed control, and evaluation protocol outside this repository.
+## Quantum hardware evaluation
 
-## License
+```bash
+python -m hardware.export_qpu_payload --config-json configs/hardware_evaluation.template.json
+python -m hardware.summarize_qpu_results --config-json configs/hardware_evaluation.template.json
+```
 
-This project is released under the MIT License. See `LICENSE` for details.
+The export contains the exact paper-aligned VQC gates and trained parameters. QPU submission uses the researcher's authorized vendor account; credentials and account-specific submission code are not stored in this repository.
+
+## Outputs
+
+Runs write model checkpoints, resolved configurations, convergence tables, dispatch histories, bus-voltage and line-loading time series, and evaluation figures under `results/`. Existing experimental results are not modified by source preparation.
 
 ## Citation
 
-If you use this code, please cite the corresponding paper.
+Citation metadata are provided in `CITATION.cff`.
 
+## License
 
+This project is released under the MIT License.

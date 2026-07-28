@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: If you use this software, please cite the associated paper.
+title: Decentralized Quantum Federated Reinforcement Learning for Safe Multi-Microgrid System Dispatch
+type: software
+authors:
+  - family-names: Li
+    given-names: Hengji
+  - family-names: Zhao
+    given-names: Ke
+  - family-names: Jiao
+    given-names: Feixiang
+  - family-names: Zhang
+    given-names: Yanyu
+  - family-names: Zhang
+    given-names: Xibeng
+  - family-names: Zhou
+    given-names: Yi
+  - family-names: Ukil
+    given-names: Abhisek
+repository-code: https://github.com/Mrtkl11/qcmdp-mmg-dispatch
+license: MIT
+version: 1.0.0
+date-released: 2026-07-28

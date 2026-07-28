@@ -1,0 +1,12 @@
+{
+  "experiment_config": "experiment_config.template.json",
+  "data_path": "../data/Environment_data_2018.csv",
+  "checkpoint_dir": "../results/single_mg/qcmdp",
+  "mg_id": 1,
+  "rollout_steps": 96,
+  "shots": 1000,
+  "repetitions": 20,
+  "payload_path": "../results/hardware/qpu_payload.json",
+  "measurement_path": "../results/hardware/qpu_measurements.csv",
+  "summary_path": "../results/hardware/qpu_summary.csv"
+}
