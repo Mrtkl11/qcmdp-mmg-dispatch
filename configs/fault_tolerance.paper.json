@@ -1,0 +1,15 @@
+{
+  "rounds": 50,
+  "local_updates": 5,
+  "client_ids": [1, 2, 3, 4, 5],
+  "inter_round_momentum": 0.2,
+  "seed": 2026,
+  "outages": [
+    {
+      "client_id": 3,
+      "start_round": 21,
+      "end_round": 40
+    }
+  ],
+  "topology_reconfiguration": true
+}

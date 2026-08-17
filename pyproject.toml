@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qcmdp-mmg-dispatch"
+version = "1.0.0"
+description = "Quantum federated constrained reinforcement learning for multi-microgrid dispatch"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "matplotlib>=3.7",
+  "torch>=2.1",
+  "pennylane>=0.36",
+  "gymnasium>=0.29"
+]
+
+[tool.setuptools.packages.find]
+include = ["src", "baselines", "hardware"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

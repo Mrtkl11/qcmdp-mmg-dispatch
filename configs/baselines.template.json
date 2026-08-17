@@ -1,0 +1,84 @@
+{
+  "environment_config": "environment.paper.json",
+  "shared": {
+    "device": "auto",
+    "seed": 2026,
+    "horizon": 256,
+    "updates": 1000,
+    "evaluation_horizon": 96,
+    "gamma": 0.995,
+    "gae_lambda": 0.98,
+    "actor_lr": 0.0005,
+    "critic_lr": 0.0005,
+    "actor_hidden": [256, 128],
+    "critic_hidden": [256, 128, 64],
+    "log_std_init": -0.75,
+    "log_std_min": -5.0,
+    "log_std_max": 1.0,
+    "entropy_coef": 0.01,
+    "value_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "log_interval": 10,
+    "report_window": 5,
+    "cost_scale": 0.01
+  },
+  "a2c": {
+    "batch_size": 128,
+    "update_epochs": 5
+  },
+  "ppo": {
+    "batch_size": 128,
+    "ppo_epochs": 5,
+    "clip_ratio": 0.2,
+    "target_kl": 0.05
+  },
+  "qppo": {
+    "actor_lr": 0.0001,
+    "critic_lr": 0.00005,
+    "batch_size": 128,
+    "ppo_epochs": 5,
+    "clip_ratio": 0.2,
+    "target_kl": 0.05,
+    "n_qubits": 4,
+    "n_layers": 4,
+    "critic_encoder_hidden": 256,
+    "quantum_weight_scale": 0.1,
+    "shots": null
+  },
+  "constrained_ppo": {
+    "batch_size": 128,
+    "ppo_epochs": 5,
+    "clip_ratio": 0.2,
+    "target_kl": 0.05,
+    "cost_limit": 850.0,
+    "initial_lambda": 0.01,
+    "lambda_lr": 0.00003529411764705882,
+    "cost_adv_scale": 1.0,
+    "cost_critic_coef": 1.0,
+    "dual_update_horizon": 96
+  },
+  "sac": {
+    "actor_hidden": [256, 128],
+    "critic_hidden": [256, 128],
+    "critic_lr": 0.001,
+    "log_std_min": -20.0,
+    "log_std_max": 2.0,
+    "buffer_size": 100000,
+    "batch_size": 128,
+    "start_steps": 1000,
+    "update_after": 1000,
+    "update_epochs": 5,
+    "tau": 0.005,
+    "log_alpha_init": 0.0,
+    "alpha_lr": 0.0003,
+    "target_entropy": -3.0
+  },
+  "federated": {
+    "rounds": 50,
+    "local_updates": 5,
+    "inter_round_momentum": 0.2,
+    "client_ids": [1, 2, 3, 4, 5],
+    "outages": [],
+    "topology_reconfiguration": true
+  }
+}
